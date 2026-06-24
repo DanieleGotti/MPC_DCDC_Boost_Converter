@@ -72,7 +72,7 @@ N = 10;
 Np_step_set = Polyhedron('A', Np_steps_H, 'b', Np_steps_h);
 
 figure(2)
-Np_step_set.plot('Alpha', 0);
+Np_step_set.plot('Alpha', 0, 'LineWidth', 1.5, 'EdgeColor', 'b');
 title('\textbf{CIS e N-step-controllable set}');
 xlabel('$\delta i_L$ [A]');
 ylabel('$\delta v_o$ [V]');
