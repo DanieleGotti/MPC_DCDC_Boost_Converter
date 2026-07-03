@@ -8,22 +8,22 @@ set(0,'DefaultFigureWindowStyle', 'docked');
 set(0,'defaulttextInterpreter','latex');
 rng('default');
 
-%%  0. Parametri del DC-DC Boost Converter 
+%% 0. Parametri del DC-DC Boost Converter 
 T = 0.65e-3;    % [s]
 L = 4.2e-3;     % [H]
 C = 2200e-6;    % [F]
-R = 85;         % [Ohm]
+Res = 85;       % [Ohm]
 Vin = 15;       % [V]
 
-%%  1. Invariant set per il sistema controllato
+%% 1. Invariant set per il sistema controllato
 
 % Riferimento fisico del sistema (equilibrio)
 x_ref = [0.389; -16];
-u_ref = 0.516e-3; % MILLISECONDI O PERCENTUALI???
+u_ref = 0.516; 
 
 % Sistema linearizzato al discreto valutato in (x_ref, u_ref)
-A = [1,                         (T/L)*(1 - u_ref);
-    -(T/C)*(1 - u_ref),          1 - (T/(R*C))];
+A = [1,                    (T/L)*(1 - u_ref);
+    -(T/C)*(1 - u_ref),    1 - (T/(Res*C))];
 
 B = [-(T/L)*(x_ref(2) - Vin);
      (T/C)*x_ref(1)];
@@ -31,10 +31,9 @@ B = [-(T/L)*(x_ref(2) - Vin);
 % Vincoli fisici assoluti
 iL_min = -1.6;      iL_max = 2.4;       
 vo_min = -19;       vo_max = -13;       
-dc_min = 0.3e-3;    dc_max = 0.75e-3;  % MILLISECONDI O PERCENTUALI???
+dc_min = 0.3;       dc_max = 0.75;  
 
 % Vincoli su stato e ingresso (nelle coordinate del sistema linearizzato)
-% Trasliamo i vincoli sottrando l'equilibrio
 Hx = [eye(2); -eye(2)];
 hx = [iL_max - x_ref(1); 
       vo_max - x_ref(2); 
@@ -50,11 +49,11 @@ Q = eye(2);
 R = 1;
 
 % Computazione control invariant set
-[CIS_H,CIS_h] = cis(A,B,[0; 0],0,Hx,hx,Hu,hu,Q,R);
-CIS = Polyhedron(CIS_H,CIS_h);
+[CIS_H, CIS_h] = cis(A, B, [0; 0], 0, Hx, hx, Hu, hu, Q, R);
+CIS = Polyhedron(CIS_H, CIS_h);
 
 figure(1)
-CIS.plot();
+CIS.plot('Alpha', 0.6);
 title('\textbf{Control invariant set sistema linearizzato}');
 xlabel('$\delta i_L$ [A]');
 ylabel('$\delta v_o$ [V]');
@@ -75,10 +74,10 @@ title('\textbf{CIS e N-step-controllable set}');
 xlabel('$\delta i_L$ [A]');
 ylabel('$\delta v_o$ [V]');
 hold on;
-CIS.plot('Color', 'r', 'Alpha', 0.8);
+CIS.plot('Alpha', 0.6);
 grid on;
 
-%%  3. Design MPC e simulazione
+%% 3. Design MPC e simulazione
 
 % Numero di step simulati
 T_sim = 60;
@@ -88,9 +87,9 @@ x_ref_lin = [0; 0];
 u_ref_lin = 0;
 
 % Stato iniziale
-x_0 = [2.3, -12.5];
+x_0 = [2.3; -13.5];
 
-mpc = mpc_ingredients(A,B,Hx,hx,Hu,hu,CIS_H,CIS_h,x_ref_lin,u_ref_lin,Q,R,N);
+mpc = mpc_ingredients_ineq(A, B, Hx, hx, Hu, hu, CIS_H, CIS_h, x_ref_lin, u_ref_lin, Q, R, N);
 
 % Log stati e ingresso sistema
 x_log = zeros(2,T_sim+1);
@@ -110,7 +109,7 @@ for tt = 1:T_sim
     b_ineq = mpc.b_ineq_base - mpc.b_ineq_x0_factor * x_lin_shifted;
     
     % Risoluzione problema di ottimizzazione
-    [delta_u_seq,~,exitflag] = quadprog(mpc.F,f,mpc.A_ineq,b_ineq);
+    [delta_u_seq, ~, exitflag] = quadprog(mpc.F, f, mpc.A_ineq, b_ineq);
 
     flags(tt) = exitflag;
 
@@ -122,11 +121,11 @@ for tt = 1:T_sim
     u_log(tt) = u_ref + delta_u_seq(1);
     
     % Risposta del sistema
-    x_log(:,tt+1) = boost_converter(x_log(:,tt), u_log(tt), T, L, C, R, Vin);
+    x_log(:,tt+1) = boost_converter(x_log(:,tt), u_log(tt), T, L, C, Res, Vin);
 
 end
 
-%%  4. Plot dei risultati
+%% 4. Plot dei risultati
 
 % Traslazione del CIS e dell'N-step set nelle coordinate originali
 CIS_shifted = CIS + x_ref;
@@ -138,10 +137,8 @@ title('\textbf{Traiettoria del sistema}');
 xlabel('$i_L$ [A]');
 ylabel('$v_o$ [V]');
 hold on;
-CIS_shifted.plot('Alpha', 0.1)
-hold on
-plot(x_log(1,:),x_log(2,:),'Color',[0 0 0.5])
+CIS_shifted.plot('Alpha', 0.6);
+hold on;
+plot(x_log(1,:),x_log(2,:),'Color',[0 0 0.5]);
 scatter(x_log(1,:),x_log(2,:),'cyan');
-xlim([iL_min-0.2, iL_max+0.2]);
-ylim([vo_min-0.5, vo_max+0.5]);
 grid on;

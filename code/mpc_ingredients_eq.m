@@ -1,15 +1,9 @@
-function mpc = mpc_ingredients(A,B,Hx,hx,Hu,hu,CIS_H,CIS_h,x_ref,u_ref,Q,R,Np)
-%MPC_INGREDIENTS Calcolo dei principali componenti di un MPC
+function mpc = mpc_ingredients_eq(A,B,Hx,hx,Hu,hu,x_ref,u_ref,Q,R,Np)
+% MPC_INGREDIENTS Calcolo dei principali componenti di un MPC
 
-%   Dimensioni dello stato e degli ingressi
+% Dimensioni dello stato e degli ingressi
 n = size(A,2);
 m = size(B,2);
-
-% Numero righe vincolo terminale
-n_ter = length(CIS_h);
-
-% Matrice per costo terminale
-[~,P,~] = dlqr(A,B,Q,R);
 
 % Traslazione dei vincoli rispetto al riferimento
 % Vincoli sullo stato traslato
@@ -21,12 +15,12 @@ hu_shifted = hu - Hu*u_ref;
 
 % Peso sugli stati
 Q_tilde = kron(eye(Np),Q);
-Q_tilde = blkdiag(Q_tilde,P);
+Q_tilde = blkdiag(Q_tilde, zeros(n));
 
-%   Peso sugli ingressi
+% Peso sugli ingressi
 R_tilde = kron(eye(Np),R);
 
-%   Matrice dipendenza predizioni da stato iniziale
+% Matrice dipendenza predizioni da stato iniziale
 A_cal = zeros(n*(Np+1),n);
 for ii = 1:(Np+1)
     if ii == 1
@@ -36,7 +30,7 @@ for ii = 1:(Np+1)
     end
 end
 
-%   Matrice dipendenza predizioni da ingressi
+% Matrice dipendenza predizioni da ingressi
 B_cal = zeros(n*(Np+1),m*Np);
 A_cal_times_B = A_cal * B;
 for ii = 1:Np
@@ -48,28 +42,31 @@ F = 2*(B_cal'*Q_tilde*B_cal + R_tilde);
 % oppure F = B_cal'*Q_tilde*B_cal + R_tilde;
 F = (F+F')/2; % forza simmetria numerica
 
-f_base  = 2*(B_cal' * Q_tilde * A_cal);
-% oppure f_base  = B_cal' * Q_tilde * A_cal;
+f_base  = 2*(B_cal'*Q_tilde*A_cal);
+% oppure f_base = B_cal'*Q_tilde*A_cal;
 
 % Vincoli
 Hx_tilde = kron(eye(Np+1),Hx_shifted);
 hx_tilde = repmat(hx_shifted,[Np+1, 1]);
 
-Hx_tilde = [Hx_tilde; zeros(n_ter,Np*n), CIS_H];
-hx_tilde = [hx_tilde; CIS_h];
-
 Hu_tilde = kron(eye(Np),Hu_shifted);
-hu_tilde = repmat(hu,[Np, 1]);
+hu_tilde = repmat(hu_shifted,[Np, 1]);
 
 % Admissible input set (inequalities)
 A_ineq = [Hx_tilde * B_cal; Hu_tilde];
 b_ineq_base = [hx_tilde; hu_tilde]; % - [F_tilde*A_cal; zeros(m*Np + n*(Np+1),n)] * x0_shifted;
+
+% Vincolo di uguaglianza
+A_eq = B_cal(end-n+1:end, :);
+A_eq_x0_factor = A_cal(end-n+1:end, :);   
 
 % Creazione struttura mpc
 mpc.F = F;
 mpc.f_base = f_base;
 mpc.A_ineq = A_ineq;
 mpc.b_ineq_base = b_ineq_base;
+mpc.A_eq = A_eq;
+mpc.A_eq_x0_factor = A_eq_x0_factor;
 mpc.Np = Np;
 mpc.b_ineq_x0_factor = [Hx_tilde*A_cal; zeros(2*m*Np,n)];
 
