@@ -22,8 +22,8 @@ x_0 = [2.3; -13.5];                         % Punto iniziale
 
 % Parametri MPC 
 T_sim = 60;     % Numero di step simulati
-N = 50;         % Orizzonte di predizione
-Q = eye(2)*1;   % Matrice costo Q
+N = 20;         % Orizzonte di predizione
+Q = eye(2);     % Matrice costo Q
 R = 1;          % Costo R
 
 % Vincoli fisici assoluti
