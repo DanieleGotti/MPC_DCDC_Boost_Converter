@@ -10,7 +10,7 @@ rng('default');
 
 %% 0. Parametri del DC-DC Boost Converter 
 % Parametri del sistema
-T = 0.65e-3;    % [s]
+T = 0.65e-2;    % [s]
 L = 4.2e-3;     % [H]
 C = 2200e-6;    % [F]
 Res = 85;       % [Ohm]
@@ -137,8 +137,67 @@ plot(x_log(1,:),x_log(2,:),'Color',[0 0 0.5]);
 scatter(x_log(1,:),x_log(2,:),'cyan');
 grid on;
 
-%% 5. Plot temporali (in millisecondi)
+
+%% 5. Plot temporali 
 figure(4);
+set(gcf, 'Color', 'w'); 
+
+% Parametri grafici uniformi
+lw = 1.2;              
+legFontSize = 8;      
+grayCol = [0.6 0.6 0.6]; 
+t_samples = 0:T_sim;
+
+% Sottografico per x1 (Corrente iL)
+subplot(3,1,1);
+p1 = plot(t_samples, x_log(1,:), 'LineWidth', lw, 'Color', 'b');
+hold on;
+p2 = yline(x_ref(1), '--', 'Color', grayCol, 'LineWidth', lw);
+p3 = yline(iL_min, '--r', 'LineWidth', lw);
+yline(iL_max, '--r', 'LineWidth', lw, 'HandleVisibility', 'off');
+
+ylabel('$x_1: i_L$ [A]');
+title('\textbf{Evoluzione temporale degli stati e dell''ingresso}');
+grid on; xlim([0 T_sim]);
+% Padding: aggiunge il 15% di spazio rispetto ai vincoli
+ylim([iL_min - 0.15*abs(iL_min), iL_max + 0.15*abs(iL_max)]);
+legend([p1, p2, p3], 'Stato x_1', 'Equilibrio', 'Vincoli', ...
+       'FontSize', legFontSize, 'Location', 'northeast');
+
+% Sottografico per x2 (Tensione vo) 
+subplot(3,1,2);
+p1 = plot(t_samples, x_log(2,:), 'LineWidth', lw, 'Color', 'b');
+hold on;
+p2 = yline(x_ref(2), '--', 'Color', grayCol, 'LineWidth', lw);
+p3 = yline(vo_min, '--r', 'LineWidth', lw);
+yline(vo_max, '--r', 'LineWidth', lw, 'HandleVisibility', 'off');
+
+ylabel('$x_2: v_o$ [V]');
+grid on; xlim([0 T_sim]);
+ylim([vo_min - 0.1*(abs(vo_max-vo_min)), vo_max + 0.1*(abs(vo_max-vo_min))]);
+legend([p1, p2, p3], 'Stato x_2', 'Equilibrio', 'Vincoli', ...
+       'FontSize', legFontSize, 'Location', 'northeast');
+
+% Sottografico per u (Duty Cycle dc) 
+subplot(3,1,3);
+p1 = stairs(0:T_sim-1, u_log, 'LineWidth', lw, 'Color', 'b');
+hold on;
+p2 = yline(u_ref, '--', 'Color', grayCol, 'LineWidth', lw); 
+p3 = yline(dc_min, '--r', 'LineWidth', lw);
+yline(dc_max, '--r', 'LineWidth', lw, 'HandleVisibility', 'off');
+
+xlabel('samples');
+ylabel('$u: dc$ [-]');
+grid on; xlim([0 T_sim]);
+ylim([dc_min - 0.05, dc_max + 0.05]);
+legend([p1, p2, p3], 'Ingresso u', 'Equilibrio', 'Vincoli', ...
+       'FontSize', legFontSize, 'Location', 'northeast');
+
+
+
+
+%% 5. Plot temporali (in millisecondi)
+figure(5);
 set(gcf, 'Color', 'w'); 
 
 % Parametri grafici uniformi
@@ -162,7 +221,7 @@ ylabel('$x_1: i_L$ [A]');
 title('\textbf{Evoluzione temporale degli stati e dell''ingresso}');
 grid on; xlim([0 t_max_ms]);
 ylim([iL_min - 0.15*abs(iL_min), iL_max + 0.15*abs(iL_max)]);
-legend([p1, p2, p3], 'Stato x_1', 'Equilibrio', 'Vincoli', ...
+legend([p1, p2, p3], 'Stato $x_1$', 'Equilibrio', 'Vincoli', ...
        'FontSize', legFontSize, 'Location', 'northeast');
 
 % Sottografico per x2 (Tensione vo) 
@@ -176,11 +235,12 @@ yline(vo_max, '--r', 'LineWidth', lw, 'HandleVisibility', 'off');
 ylabel('$x_2: v_o$ [V]');
 grid on; xlim([0 t_max_ms]);
 ylim([vo_min - 0.1*(abs(vo_max-vo_min)), vo_max + 0.1*(abs(vo_max-vo_min))]);
-legend([p1, p2, p3], 'Stato x_2', 'Equilibrio', 'Vincoli', ...
+legend([p1, p2, p3], 'Stato $x_2$', 'Equilibrio', 'Vincoli', ...
        'FontSize', legFontSize, 'Location', 'northeast');
 
 % Sottografico per u (Duty Cycle dc) 
 ax(3) = subplot(3,1,3);
+% Usiamo t_ms(1:end-1) perché u_log ha T_sim elementi, mentre t_ms ne ha T_sim + 1
 p1 = stairs(t_ms(1:end-1), u_log, 'LineWidth', lw, 'Color', 'b');
 hold on;
 p2 = yline(u_ref, '--', 'Color', grayCol, 'LineWidth', lw); 
@@ -191,6 +251,6 @@ xlabel('Tempo [ms]');
 ylabel('$u: dc$ [-]');
 grid on; xlim([0 t_max_ms]);
 ylim([dc_min - 0.05, dc_max + 0.05]);
-legend([p1, p2, p3], 'Ingresso u', 'Equilibrio', 'Vincoli', ...
+legend([p1, p2, p3], 'Ingresso $u$', 'Equilibrio', 'Vincoli', ...
        'FontSize', legFontSize, 'Location', 'northeast');
 
